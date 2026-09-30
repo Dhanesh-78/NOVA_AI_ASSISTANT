@@ -1,0 +1,75 @@
+RESULTS AND DISCUSSION
+
+4.1 Experimental Results
+
+The proposed NOVA rule-based intent detection system was evaluated using a command-intent dataset containing 117 commands distributed across 37 intent classes. The dataset consisted of 60 commands used during the initial development/evaluation stage and 57 previously unseen paraphrased commands used to assess generalization to alternative user expressions.
+
+The proposed rule-based system correctly classified all 117 commands, resulting in an overall accuracy of 100.00%. Precision, recall, and F1-score were also 100.00% at both the macro and weighted levels.
+
+For the 57 previously unseen paraphrased commands, the system achieved 57 correct predictions out of 57, corresponding to an accuracy of 100.00%. This indicates that the generalized phrase-matching rules were able to recognize the tested variations of commands while preserving the intended command labels.
+
+4.2 Comparison with the Machine Learning Baseline
+
+To provide a baseline comparison, a TF-IDF feature representation combined with Logistic Regression was implemented. The same 57 previously unseen commands were used for the direct comparison.
+
+The TF-IDF + Logistic Regression baseline achieved an accuracy of 38.60%, with a macro precision of 19.25%, macro recall of 25.71%, and macro F1-score of 21.02%.
+
+In comparison, the proposed rule-based approach achieved 100.00% accuracy and 100.00% macro F1-score on the same 57-command evaluation set.
+
+Table 1 summarizes the comparison.
+
+Method                         Accuracy    Macro Precision    Macro Recall    Macro F1
+Rule-Based NOVA                100.00%     100.00%            100.00%         100.00%
+TF-IDF + Logistic Regression    38.60%      19.25%             25.71%          21.02%
+
+The results show that, for this controlled command-intent dataset and the tested paraphrase patterns, the rule-based approach provided more consistent intent recognition than the selected TF-IDF and Logistic Regression baseline.
+
+4.3 Analysis of the Rule-Based Approach
+
+The strong performance of the rule-based system can be attributed to the structure of the command domain. NOVA operates on a predefined set of computer-control intents, such as volume control, brightness control, application launching, website navigation, media control, system information retrieval, and file operations.
+
+Many of these intents contain recognizable action-related phrases. For example, expressions such as "increase volume", "make the sound louder", and "turn up my audio" can all represent the same volume-increase intent. Similarly, expressions such as "brighten the screen", "increase screen brightness", and "make the display brighter" can correspond to the same brightness-increase intent.
+
+The generalized phrase-matching rules were designed to capture such variations instead of relying only on one exact command phrase.
+
+4.4 Analysis of the Machine Learning Baseline
+
+The relatively low performance of the TF-IDF + Logistic Regression model can be explained partly by the characteristics of the experimental dataset.
+
+The dataset contains 37 intent classes but only 60 commands in the training portion. Consequently, several intent classes have very few training examples. A traditional TF-IDF representation depends strongly on lexical patterns observed during training. When a previously unseen command uses different words or sentence structures, the model may not have sufficient examples to associate those words with the correct intent.
+
+The classification results also showed confusion between semantically related commands, particularly volume and brightness operations. This demonstrates that a small training dataset can limit the ability of a statistical classifier to generalize across paraphrased commands.
+
+4.5 Confusion Matrix Analysis
+
+The confusion matrix of the rule-based system was completely diagonal for the evaluated commands, indicating that every tested command was assigned to its expected intent.
+
+In contrast, the confusion matrix of the TF-IDF + Logistic Regression baseline contained predictions distributed across multiple incorrect intent classes. This indicates that the baseline model frequently confused intents when the input wording differed from the examples observed during training.
+
+The confusion matrix is therefore useful for identifying not only the overall accuracy difference but also the specific types of intent confusion produced by the baseline model.
+
+4.6 Discussion
+
+The experimental findings demonstrate that a carefully designed rule-based approach can be effective for a constrained voice-assistant command domain. The approach does not require a large training dataset and can directly encode domain-specific linguistic variations.
+
+However, the 100.00% result should be interpreted within the scope of the experimental dataset. The evaluation contains a relatively small number of commands and a fixed set of intent categories. In addition, the paraphrases were constructed within the expected command domain. Therefore, the results should not be interpreted as evidence that rule-based systems generally outperform machine learning methods.
+
+The machine learning baseline also used a relatively small training dataset. Increasing the number and diversity of training examples, applying data augmentation, and evaluating more advanced language models could produce different results.
+
+Future experiments should therefore evaluate the system using a larger dataset containing naturally spoken commands, additional speakers, speech-recognition errors, ambiguous commands, spelling variations, and commands outside the predefined intent set.
+
+4.7 Summary of Findings
+
+The main findings of the experiment are:
+
+1. The proposed rule-based NOVA intent detector achieved 100.00% accuracy on the complete 117-command evaluation dataset.
+
+2. The system achieved 100.00% accuracy on 57 previously unseen paraphrased commands.
+
+3. Macro precision, macro recall, and macro F1-score were all 100.00% for the proposed approach.
+
+4. The TF-IDF + Logistic Regression baseline achieved 38.60% accuracy and 21.02% macro F1-score on the same 57-command test set.
+
+5. The results indicate that, within this controlled experimental setting, the generalized rule-based approach consistently recognized the tested command variations.
+
+6. The limited dataset size and controlled paraphrase construction are important limitations and should be considered when interpreting the results.

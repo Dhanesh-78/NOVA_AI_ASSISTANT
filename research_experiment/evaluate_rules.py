@@ -23,6 +23,15 @@ for _, row in df.iterrows():
 
     predicted, query = detect_local_command(command)
 
+    # Normalize local command labels for research evaluation
+    label_mapping = {
+        "media_pause": "play_pause",
+        "media_next": "next_song",
+        "media_previous": "previous_song"
+    }
+
+    predicted = label_mapping.get(predicted, predicted)
+
     correct = predicted == expected
 
     results.append({
