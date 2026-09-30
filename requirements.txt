@@ -4,3 +4,8 @@ google-genai
 python-dotenv
 requests
 pydantic
+psutil
+pyautogui
+SpeechRecognition
+PyAudio
+pyttsx3

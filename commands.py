@@ -5,6 +5,7 @@ import os
 import ctypes
 
 import psutil
+import platform
 import pyautogui
 
 from urllib.parse import quote_plus
@@ -133,6 +134,17 @@ def execute_command(action: str, query: str = ""):
         pyautogui.press("prevtrack")
 
         return "Went back to the previous track."
+    
+    elif action == "get_time":
+        from datetime import datetime
+        return datetime.now().strftime("The time is %I:%M %p.")
+
+
+    elif action == "get_date":
+        from datetime import datetime
+        return datetime.now().strftime(
+            "Today is %A, %d %B %Y."
+        )
 
     # ==========================================
     # WEBSITES
@@ -387,26 +399,36 @@ def execute_command(action: str, query: str = ""):
 
     elif action == "get_system_info":
 
-        memory = psutil.virtual_memory()
+        system = platform.system()
+        release = platform.release()
+        version = platform.version()
+        machine = platform.machine()
+        processor = platform.processor()
+        computer_name = platform.node()
 
-        cpu = psutil.cpu_percent(interval=1)
+        ram = psutil.virtual_memory()
+        ram_total = round(ram.total / (1024 ** 3), 1)
+        ram_used = round(ram.percent, 1)
+
+        cpu_usage = psutil.cpu_percent(interval=1)
 
         battery = psutil.sensors_battery()
 
         if battery:
-
-            battery_info = f"{battery.percent:.0f}%"
-
+            battery_percent = round(battery.percent)
         else:
-
-            battery_info = "Unavailable"
+            battery_percent = "unknown"
 
         return (
-            f"CPU usage: {cpu:.0f}%. "
-            f"RAM usage: {memory.percent:.0f}%. "
-            f"Battery: {battery_info}."
+            f"Computer: {computer_name}. "
+            f"Operating system: {system} {release}. "
+            f"System version: {version}. "
+            f"Processor: {processor}. "
+            f"Architecture: {machine}. "
+            f"RAM: {ram_total} GB total, {ram_used}% currently used. "
+            f"CPU usage: {cpu_usage}%. "
+            f"Battery: {battery_percent}%."
         )
-
     # ==========================================
     # SCREENSHOT
     # ==========================================

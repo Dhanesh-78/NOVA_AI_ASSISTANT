@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 nova_memory.db
 .venv/
+.venv313/
 build/
 dist/
 NOVA_CLOUD/
