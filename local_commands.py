@@ -479,9 +479,6 @@ def detect_local_command(text):
         return "get_weather", ""
 
     # ==========================================
-    # NOTHING MATCHED
-    # ==========================================
-    # ==========================================
     # CPU
     # ==========================================
 
@@ -532,4 +529,175 @@ def detect_local_command(text):
     ):
         return "get_battery", ""
 
-    return None
+    # ==========================================
+    # GENERALIZED / PARAPHRASED COMMANDS
+    # ==========================================
+
+    # ------------------------------------------
+    # VOLUME - GENERAL PARAPHRASES
+    # ------------------------------------------
+
+    if (
+        ("sound louder" in text) or
+        ("turn up my audio" in text) or
+        ("more volume" in text) or
+        ("boost the sound" in text)
+    ):
+        return "volume_up", ""
+
+    if (
+        ("audio quieter" in text) or
+        ("reduce the sound" in text) or
+        ("less volume" in text) or
+        ("turn down the audio" in text)
+    ):
+        return "volume_down", ""
+
+    if (
+        "silence my audio" in text or
+        "silence the audio" in text
+    ):
+        return "volume_mute", ""
+
+    if (
+        "how loud is my computer" in text or
+        "how loud is my pc" in text
+    ):
+        return "get_volume", ""
+
+
+    # ------------------------------------------
+    # BRIGHTNESS - GENERAL PARAPHRASES
+    # ------------------------------------------
+
+    if (
+        "brighten my display" in text or
+        "increase my screen light" in text or
+        "brighter display" in text or
+        "turn up the screen light" in text
+    ):
+        return "brightness_up", ""
+
+    if (
+        "display dimmer" in text or
+        "reduce the screen brightness" in text or
+        "darker screen" in text or
+        "dim the display" in text
+    ):
+        return "brightness_down", ""
+
+    if (
+        "how bright is my screen" in text or
+        "how bright is the screen" in text
+    ):
+        return "get_brightness", ""
+
+
+    # ------------------------------------------
+    # APPLICATIONS
+    # ------------------------------------------
+
+    if (
+        "bring up file explorer" in text or
+        "open file explorer" in text or
+        "files window" in text
+    ):
+        return "open_file_explorer", ""
+
+    if (
+        "need the task manager" in text or
+        "bring up task manager" in text
+    ):
+        return "open_task_manager", ""
+
+
+    # ------------------------------------------
+    # WEBSITES
+    # ------------------------------------------
+
+    if "take me to youtube" in text or "visit youtube" in text:
+        return "open_youtube", ""
+
+    if "take me to google" in text or "visit google" in text:
+        return "open_google", ""
+
+    if "take me to gmail" in text or "visit my gmail" in text:
+        return "open_gmail", ""
+
+    if (
+        "python tutorials using google" in text or
+        "find python tutorials using google" in text
+    ):
+        return "search_google", "python tutorials"
+
+    if (
+        "machine learning videos on youtube" in text or
+        "look up machine learning videos on youtube" in text
+    ):
+        return "search_youtube", "machine learning"
+
+
+    # ------------------------------------------
+    # FILES / FOLDERS
+    # ------------------------------------------
+
+    if (
+        "bring up my downloads folder" in text or
+        "open my downloads folder" in text
+    ):
+        return "open_downloads", ""
+
+    if "make a folder called" in text:
+        match = re.search(r"make a folder called (.+?)(?: on my desktop)?$", text)
+        if match:
+            return "create_folder", match.group(1).strip()
+
+    if "create a new text file called" in text:
+        match = re.search(
+            r"create a new text file called (.+?)(?: on my desktop)?$",
+            text
+        )
+        if match:
+            return "create_text_file", match.group(1).strip()
+
+
+    # ------------------------------------------
+    # SCREENSHOT
+    # ------------------------------------------
+
+    if (
+        "capture the screen" in text or
+        "capture my screen" in text
+    ):
+        return "take_screenshot", ""
+
+
+    # ------------------------------------------
+    # MEDIA
+    # ------------------------------------------
+
+    if (
+        "resume or pause the music" in text or
+        "pause or resume the music" in text
+    ):
+        return "media_pause", ""
+
+    if (
+        "play the next track" in text or
+        "next track" in text
+    ):
+        return "media_next", ""
+
+    if (
+        "song before this one" in text or
+        "previous song" in text or
+        "go to the song before" in text
+    ):
+        return "media_previous", ""
+
+
+    # ==========================================
+    # NOTHING MATCHED
+    # ==========================================
+
+    return "unknown", "" 
