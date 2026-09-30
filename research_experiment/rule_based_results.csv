@@ -1,0 +1,61 @@
+id,command,category,expected_intent,predicted_intent,correct
+1,Increase the volume,Volume,volume_up,volume_up,True
+2,Raise my volume,Volume,volume_up,volume_up,True
+3,Turn the volume up,Volume,volume_up,volume_up,True
+4,Make the volume louder,Volume,volume_up,volume_up,True
+5,Decrease the volume,Volume,volume_down,volume_down,True
+6,Lower my volume,Volume,volume_down,volume_down,True
+7,Turn the volume down,Volume,volume_down,volume_down,True
+8,Make the sound quieter,Volume,volume_down,volume_down,True
+9,Mute the volume,Volume,volume_mute,volume_mute,True
+10,What is my current volume?,Volume,get_volume,get_volume,True
+11,Increase the brightness,Brightness,brightness_up,brightness_up,True
+12,Raise my screen brightness,Brightness,brightness_up,brightness_up,True
+13,Turn the brightness up,Brightness,brightness_up,brightness_up,True
+14,Make my screen brighter,Brightness,brightness_up,brightness_up,True
+15,Decrease the brightness,Brightness,brightness_down,brightness_down,True
+16,Lower my screen brightness,Brightness,brightness_down,brightness_down,True
+17,Turn the brightness down,Brightness,brightness_down,brightness_down,True
+18,Dim my screen,Brightness,brightness_down,brightness_down,True
+19,What is my current brightness?,Brightness,get_brightness,get_brightness,True
+20,Tell me my brightness level,Brightness,get_brightness,get_brightness,True
+21,Open the calculator,Application,open_calculator,open_calculator,True
+22,Launch Calculator,Application,open_calculator,open_calculator,True
+23,Open Notepad,Application,open_notepad,open_notepad,True
+24,Start Notepad for me,Application,open_notepad,open_notepad,True
+25,Open File Explorer,Application,open_file_explorer,open_file_explorer,True
+26,Launch Task Manager,Application,open_task_manager,open_task_manager,True
+27,Open Command Prompt,Application,open_command_prompt,open_command_prompt,True
+28,Open Windows Settings,Application,open_settings,open_settings,True
+29,Close Calculator,Application,close_calculator,close_calculator,True
+30,Open the files window,Application,open_file_explorer,open_file_explorer,True
+31,Open YouTube,Web,open_youtube,open_youtube,True
+32,Launch YouTube,Web,open_youtube,open_youtube,True
+33,Open Google,Web,open_google,open_google,True
+34,Take me to Google,Web,open_google,open_google,True
+35,Open Gmail,Web,open_gmail,open_gmail,True
+36,Go to my Gmail,Web,open_gmail,open_gmail,True
+37,Search Google for Python tutorials,Web,search_google,search_google,True
+38,Search YouTube for machine learning videos,Web,search_youtube,search_youtube,True
+39,Open my Desktop folder,File/Folder,open_desktop,open_desktop,True
+40,Open Documents,File/Folder,open_documents,open_documents,True
+41,Open my Downloads folder,File/Folder,open_downloads,open_downloads,True
+42,Create a folder named Research on my Desktop,File/Folder,create_folder,create_folder,True
+43,Make a new text file called notes on my Desktop,File/Folder,create_text_file,create_text_file,True
+44,Create a folder named NOVA_Test,File/Folder,create_folder,create_folder,True
+45,Make a text file called experiment.txt,File/Folder,create_text_file,create_text_file,True
+46,What time is it?,System Info,get_time,get_time,True
+47,Tell me today's date,System Info,get_date,get_date,True
+48,Check my battery percentage,System Info,get_battery,get_battery,True
+49,How much RAM am I using?,System Info,get_ram,get_ram,True
+50,What is my CPU usage?,System Info,get_cpu,get_cpu,True
+51,Show me my system information,System Info,get_system_info,get_system_info,True
+52,Take a screenshot,System,take_screenshot,take_screenshot,True
+53,Pause the music,Media,play_pause,play_pause,True
+54,Skip to the next song,Media,next_song,next_song,True
+55,Go back to the previous track,Media,previous_song,previous_song,True
+56,Lock my laptop,Computer,lock_computer,lock_computer,True
+57,Restart my laptop,Computer,restart_computer,restart_computer,True
+58,Shut down my laptop,Computer,shutdown_computer,shutdown_computer,True
+59,I want to turn off my computer,Computer,shutdown_computer,shutdown_computer,True
+60,Can you restart the computer?,Computer,restart_computer,restart_computer,True

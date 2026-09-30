@@ -1,0 +1,11 @@
+Metric,Value
+Total Commands,117
+Correct Predictions,117
+Incorrect Predictions,0
+Accuracy,100.00%
+Macro Precision,100.00%
+Macro Recall,100.00%
+Macro F1-Score,100.00%
+Weighted Precision,100.00%
+Weighted Recall,100.00%
+Weighted F1-Score,100.00%

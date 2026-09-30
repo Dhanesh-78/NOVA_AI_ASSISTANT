@@ -1,0 +1,58 @@
+id,command,category,expected_intent
+1,Could you make the sound louder?,Volume,volume_up
+2,Please turn up my audio,Volume,volume_up
+3,I need more volume,Volume,volume_up
+4,Can you boost the sound?,Volume,volume_up
+5,Please make the audio quieter,Volume,volume_down
+6,Could you reduce the sound?,Volume,volume_down
+7,I need less volume,Volume,volume_down
+8,Turn down the audio please,Volume,volume_down
+9,Please silence my audio,Volume,volume_mute
+10,How loud is my computer right now?,Volume,get_volume
+11,Can you brighten my display?,Brightness,brightness_up
+12,Please increase my screen light, Brightness,brightness_up
+13,I want a brighter display, Brightness,brightness_up
+14,Can you turn up the screen light?,Brightness,brightness_up
+15,Please make my display dimmer, Brightness,brightness_down
+16,Reduce the screen brightness please, Brightness,brightness_down
+17,I want a darker screen, Brightness,brightness_down
+18,Can you dim the display?, Brightness,brightness_down
+19,How bright is my screen?,Brightness,get_brightness
+20,What brightness level am I on?,Brightness,get_brightness
+21,Could you start the calculator?,Application,open_calculator
+22,Please launch the calculator app,Application,open_calculator
+23,I need Notepad opened,Application,open_notepad
+24,Can you start Notepad?,Application,open_notepad
+25,Please bring up File Explorer,Application,open_file_explorer
+26,I need the task manager,Application,open_task_manager
+27,Could you bring up Task Manager?,Application,open_task_manager
+28,Please open Windows settings for me,Application,open_settings
+29,Exit the calculator,Application,close_calculator
+30,Please bring up the files window,Application,open_file_explorer
+31,Take me to YouTube,Web,open_youtube
+32,I want to visit YouTube,Web,open_youtube
+33,Please take me to Google,Web,open_google
+34,I need to visit Google,Web,open_google
+35,Take me to Gmail,Web,open_gmail
+36,I want to visit my Gmail,Web,open_gmail
+37,Find Python tutorials using Google,Web,search_google
+38,Look up machine learning videos on YouTube,Web,search_youtube
+39,Can you open my desktop?,File/Folder,open_desktop
+40,Please go to my Documents folder,File/Folder,open_documents
+41,Bring up my Downloads folder,File/Folder,open_downloads
+42,Make a folder called Research on my Desktop,File/Folder,create_folder
+43,Create a new text file called notes on my Desktop,File/Folder,create_text_file
+44,I need a new folder named NOVA_Test,File/Folder,create_folder
+45,Create a text file named experiment.txt,File/Folder,create_text_file
+46,Could you tell me the current time?,System Info,get_time
+47,What day is it today?,System Info,get_date
+48,How much battery do I have left?,System Info,get_battery
+49,Can you tell me my RAM usage?,System Info,get_ram
+50,How heavily is my CPU being used?,System Info,get_cpu
+51,Can you show my computer information?,System Info,get_system_info
+52,Capture the screen for me, System,take_screenshot
+53,Resume or pause the music,Media,play_pause
+54,Play the next track,Media,next_song
+55,Go to the song before this one,Media,previous_song
+56,Please lock the computer,Computer,lock_computer
+57,Can you reboot my laptop?,Computer,restart_computer

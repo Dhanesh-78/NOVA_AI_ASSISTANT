@@ -1,0 +1,58 @@
+id,command,category,expected_intent,predicted_intent,correct
+1,Could you make the sound louder?,Volume,volume_up,volume_down,False
+2,Please turn up my audio,Volume,volume_up,brightness_up,False
+3,I need more volume,Volume,volume_up,volume_up,True
+4,Can you boost the sound?,Volume,volume_up,volume_down,False
+5,Please make the audio quieter,Volume,volume_down,volume_down,True
+6,Could you reduce the sound?,Volume,volume_down,volume_down,True
+7,I need less volume,Volume,volume_down,volume_up,False
+8,Turn down the audio please,Volume,volume_down,volume_down,True
+9,Please silence my audio,Volume,volume_mute,brightness_down,False
+10,How loud is my computer right now?,Volume,get_volume,brightness_down,False
+11,Can you brighten my display?,Brightness,brightness_up,brightness_down,False
+12,Please increase my screen light, Brightness,brightness_up,brightness_up,True
+13,I want a brighter display, Brightness,brightness_up,brightness_up,True
+14,Can you turn up the screen light?,Brightness,brightness_up,brightness_up,True
+15,Please make my display dimmer, Brightness,brightness_down,brightness_up,False
+16,Reduce the screen brightness please, Brightness,brightness_down,brightness_down,True
+17,I want a darker screen, Brightness,brightness_down,brightness_down,True
+18,Can you dim the display?, Brightness,brightness_down,brightness_down,True
+19,How bright is my screen?,Brightness,get_brightness,brightness_down,False
+20,What brightness level am I on?,Brightness,get_brightness,brightness_up,False
+21,Could you start the calculator?,Application,open_calculator,open_calculator,True
+22,Please launch the calculator app,Application,open_calculator,open_calculator,True
+23,I need Notepad opened,Application,open_notepad,open_notepad,True
+24,Can you start Notepad?,Application,open_notepad,open_notepad,True
+25,Please bring up File Explorer,Application,open_file_explorer,brightness_up,False
+26,I need the task manager,Application,open_task_manager,volume_down,False
+27,Could you bring up Task Manager?,Application,open_task_manager,brightness_up,False
+28,Please open Windows settings for me,Application,open_settings,volume_down,False
+29,Exit the calculator,Application,close_calculator,open_calculator,False
+30,Please bring up the files window,Application,open_file_explorer,volume_up,False
+31,Take me to YouTube,Web,open_youtube,open_google,False
+32,I want to visit YouTube,Web,open_youtube,volume_down,False
+33,Please take me to Google,Web,open_google,open_google,True
+34,I need to visit Google,Web,open_google,open_google,True
+35,Take me to Gmail,Web,open_gmail,open_google,False
+36,I want to visit my Gmail,Web,open_gmail,open_gmail,True
+37,Find Python tutorials using Google,Web,search_google,volume_down,False
+38,Look up machine learning videos on YouTube,Web,search_youtube,brightness_up,False
+39,Can you open my desktop?,File/Folder,open_desktop,brightness_down,False
+40,Please go to my Documents folder,File/Folder,open_documents,open_gmail,False
+41,Bring up my Downloads folder,File/Folder,open_downloads,brightness_up,False
+42,Make a folder called Research on my Desktop,File/Folder,create_folder,create_folder,True
+43,Create a new text file called notes on my Desktop,File/Folder,create_text_file,create_text_file,True
+44,I need a new folder named NOVA_Test,File/Folder,create_folder,create_folder,True
+45,Create a text file named experiment.txt,File/Folder,create_text_file,create_text_file,True
+46,Could you tell me the current time?,System Info,get_time,volume_down,False
+47,What day is it today?,System Info,get_date,volume_down,False
+48,How much battery do I have left?,System Info,get_battery,volume_down,False
+49,Can you tell me my RAM usage?,System Info,get_ram,brightness_down,False
+50,How heavily is my CPU being used?,System Info,get_cpu,brightness_down,False
+51,Can you show my computer information?,System Info,get_system_info,brightness_down,False
+52,Capture the screen for me, System,take_screenshot,brightness_down,False
+53,Resume or pause the music,Media,play_pause,volume_down,False
+54,Play the next track,Media,next_song,volume_down,False
+55,Go to the song before this one,Media,previous_song,volume_down,False
+56,Please lock the computer,Computer,lock_computer,volume_down,False
+57,Can you reboot my laptop?,Computer,restart_computer,restart_computer,True

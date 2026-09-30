@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+nova_memory.db
+.venv/
+build/
+dist/
+NOVA_CLOUD/

@@ -1,0 +1,61 @@
+id,command,category,expected_intent,safe_to_execute
+1,Increase the volume,Volume,volume_up,Yes
+2,Raise my volume,Volume,volume_up,Yes
+3,Turn the volume up,Volume,volume_up,Yes
+4,Make the volume louder,Volume,volume_up,No
+5,Decrease the volume,Volume,volume_down,Yes
+6,Lower my volume,Volume,volume_down,Yes
+7,Turn the volume down,Volume,volume_down,Yes
+8,Make the sound quieter,Volume,volume_down,No
+9,Mute the volume,Volume,volume_mute,Yes
+10,What is my current volume?,Volume,get_volume,Yes
+11,Increase the brightness,Brightness,brightness_up,Yes
+12,Raise my screen brightness,Brightness,brightness_up,Yes
+13,Turn the brightness up,Brightness,brightness_up,Yes
+14,Make my screen brighter,Brightness,brightness_up,No
+15,Decrease the brightness,Brightness,brightness_down,Yes
+16,Lower my screen brightness,Brightness,brightness_down,Yes
+17,Turn the brightness down,Brightness,brightness_down,Yes
+18,Dim my screen,Brightness,brightness_down,No
+19,What is my current brightness?,Brightness,get_brightness,Yes
+20,Tell me my brightness level,Brightness,get_brightness,No
+21,Open the calculator,Application,open_calculator,Yes
+22,Launch Calculator,Application,open_calculator,No
+23,Open Notepad,Application,open_notepad,Yes
+24,Start Notepad for me,Application,open_notepad,No
+25,Open File Explorer,Application,open_file_explorer,Yes
+26,Launch Task Manager,Application,open_task_manager,No
+27,Open Command Prompt,Application,open_command_prompt,Yes
+28,Open Windows Settings,Application,open_settings,No
+29,Close Calculator,Application,close_calculator,Yes
+30,Open the files window,Application,open_file_explorer,No
+31,Open YouTube,Web,open_youtube,Yes
+32,Launch YouTube,Web,open_youtube,No
+33,Open Google,Web,open_google,Yes
+34,Take me to Google,Web,open_google,No
+35,Open Gmail,Web,open_gmail,Yes
+36,Go to my Gmail,Web,open_gmail,No
+37,Search Google for Python tutorials,Web,search_google,No
+38,Search YouTube for machine learning videos,Web,search_youtube,No
+39,Open my Desktop folder,File/Folder,open_desktop,No
+40,Open Documents,File/Folder,open_documents,Yes
+41,Open my Downloads folder,File/Folder,open_downloads,No
+42,Create a folder named Research on my Desktop,File/Folder,create_folder,No
+43,Make a new text file called notes on my Desktop,File/Folder,create_text_file,No
+44,Create a folder named NOVA_Test,File/Folder,create_folder,No
+45,Make a text file called experiment.txt,File/Folder,create_text_file,No
+46,What time is it?,System Info,get_time,Yes
+47,Tell me today's date,System Info,get_date,Yes
+48,Check my battery percentage,System Info,get_battery,Yes
+49,How much RAM am I using?,System Info,get_ram,Yes
+50,What is my CPU usage?,System Info,get_cpu,Yes
+51,Show me my system information,System Info,get_system_info,Yes
+52,Take a screenshot,System,take_screenshot,Yes
+53,Pause the music,Media,play_pause,Yes
+54,Skip to the next song,Media,next_song,No
+55,Go back to the previous track,Media,previous_song,No
+56,Lock my laptop,Computer,lock_computer,Yes
+57,Restart my laptop,Computer,restart_computer,Yes
+58,Shut down my laptop,Computer,shutdown_computer,Yes
+59,I want to turn off my computer,Computer,shutdown_computer,No
+60,Can you restart the computer?,Computer,restart_computer,No

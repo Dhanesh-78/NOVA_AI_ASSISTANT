@@ -1,0 +1,10 @@
+Metric,Value
+Training Commands,60
+Testing Commands,57
+Accuracy,38.60%
+Macro Precision,19.25%
+Macro Recall,25.71%
+Macro F1-Score,21.02%
+Weighted Precision,25.64%
+Weighted Recall,38.60%
+Weighted F1-Score,28.93%
