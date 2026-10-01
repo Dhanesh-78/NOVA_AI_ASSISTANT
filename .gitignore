@@ -1,9 +1,9 @@
-.env
-__pycache__/
-*.pyc
-nova_memory.db
 .venv/
 .venv313/
+__pycache__/
+*.pyc
+.env
 build/
 dist/
 NOVA_CLOUD/
+nova_memory.db

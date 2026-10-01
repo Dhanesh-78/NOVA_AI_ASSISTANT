@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Literal
 from pathlib import Path
+
 import requests
+import sys
 import re
 
 from commands import execute_command
@@ -12,48 +14,60 @@ from api_services import get_weather
 from memory import (
     init_db,
     save_message,
+    get_recent_messages,
+    get_memories,
+    save_memory,
     clear_memory
 )
 
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
+# =========================================================
+# PATH / ENVIRONMENT
+# =========================================================
+
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).resolve().parent
+else:
+    BASE_DIR = Path(__file__).resolve().parent
+
+
+# =========================================================
+# NOVA CLOUD API
+# =========================================================
 
 CLOUD_API_URL = "https://nova-cloud-api-i7jv.onrender.com"
+
+# Cloud requests can take several seconds.
 CLOUD_TIMEOUT = 90
 
 
-# ============================================================
+# =========================================================
 # FASTAPI APP
-# ============================================================
+# =========================================================
 
 app = FastAPI(
-    title="NOVA AI Assistant",
+    title="Nova AI Assistant API",
+    description="An intelligent AI-powered Windows laptop assistant",
     version="1.0.0"
 )
 
 
-# ============================================================
-# DATABASE INITIALIZATION
-# ============================================================
+# =========================================================
+# DATABASE
+# =========================================================
 
 init_db()
 
 
-# ============================================================
+# =========================================================
 # REQUEST MODELS
-# ============================================================
+# =========================================================
 
 class ChatRequest(BaseModel):
     message: str
 
 
 class SmartCommandRequest(BaseModel):
-    message: str
-
-
-class CommandRequest(BaseModel):
     message: str
 
 
@@ -66,9 +80,9 @@ class ConfirmCommandRequest(BaseModel):
     query: str = ""
 
 
-# ============================================================
-# DANGEROUS ACTIONS
-# ============================================================
+# =========================================================
+# LOCAL COMMAND ACTIONS
+# =========================================================
 
 DANGEROUS_ACTIONS = {
     "shutdown_computer",
@@ -77,42 +91,23 @@ DANGEROUS_ACTIONS = {
 }
 
 
-# ============================================================
-# ALLOWED ACTIONS
-# ============================================================
-
 ALLOWED_ACTIONS = {
-    # Volume
-    "volume_up",
-    "volume_down",
-    "volume_mute",
-    "get_volume",
-
-    # Brightness
-    "brightness_up",
-    "brightness_down",
-    "get_brightness",
-
-    # Media
-    "media_play",
-    "media_pause",
-    "media_next",
-    "media_previous",
 
     # Websites
     "open_youtube",
-    "open_google",
-    "open_gmail",
-    "search_google",
     "search_youtube",
+    "open_google",
+    "search_google",
+    "open_gmail",
 
     # Applications
     "open_calculator",
     "close_calculator",
     "open_notepad",
     "open_file_explorer",
+    "close_file_explorer",
     "open_task_manager",
-    "open_cmd",
+    "open_command_prompt",
     "open_settings",
 
     # Folders
@@ -135,6 +130,22 @@ ALLOWED_ACTIONS = {
     # Screenshot
     "take_screenshot",
 
+    # Volume
+    "volume_up",
+    "volume_down",
+    "volume_mute",
+    "get_volume",
+
+    # Brightness
+    "brightness_up",
+    "brightness_down",
+    "get_brightness",
+
+    # Media
+    "play_pause",
+    "next_song",
+    "previous_song",
+
     # Computer
     "lock_computer",
     "shutdown_computer",
@@ -145,56 +156,378 @@ ALLOWED_ACTIONS = {
 }
 
 
-# ============================================================
-# ROOT
-# ============================================================
+# =========================================================
+# MEMORY DETECTION
+# =========================================================
 
-@app.get("/")
-def root():
+def is_memory_request(message: str) -> bool:
+    """
+    Detect whether the user is asking Nova to remember
+    something or explicitly providing personal information.
+
+    Examples that SHOULD trigger memory:
+
+        remember that I like Python
+        can you remember my favourite language is Tamil
+        my favourite language is Tamil
+        I like Python
+        I prefer Python
+
+    Examples that SHOULD NOT trigger memory:
+
+        my favourite language
+        what is my favourite language
+        how are you
+    """
+
+    text = message.lower().strip()
+
+    if not text:
+        return False
+
+    # ---------------------------------------------
+    # Explicit memory requests
+    # ---------------------------------------------
+
+    direct_memory_phrases = [
+        "remember that",
+        "remember this",
+        "can you remember",
+        "please remember",
+        "save this",
+        "save that",
+        "keep this in mind",
+        "don't forget",
+        "do not forget"
+    ]
+
+    if any(phrase in text for phrase in direct_memory_phrases):
+        return True
+
+    # ---------------------------------------------
+    # Personal information statements
+    # ---------------------------------------------
+
+    personal_memory_patterns = [
+        "my favourite language is",
+        "my favorite language is",
+        "my favourite languages are",
+        "my favorite languages are",
+        "my favourite programming language is",
+        "my favorite programming language is",
+        "i like",
+        "i love",
+        "i prefer",
+        "my preferred",
+        "my name is"
+    ]
+
+    if any(pattern in text for pattern in personal_memory_patterns):
+        return True
+
+    return False
+
+
+# =========================================================
+# MEMORY TEXT CLEANUP
+# =========================================================
+
+def clean_memory_text(message: str) -> str:
+    """
+    Convert a memory request into a clean statement that can
+    be stored permanently.
+    """
+
+    text = message.strip()
+
+    prefixes = [
+        "remember that ",
+        "remember this: ",
+        "remember this ",
+        "can you remember that ",
+        "can you remember ",
+        "please remember that ",
+        "please remember ",
+        "save this: ",
+        "save this ",
+        "save that ",
+        "keep this in mind: ",
+        "keep this in mind "
+    ]
+
+    lower_text = text.lower()
+
+    for prefix in prefixes:
+        if lower_text.startswith(prefix):
+            return text[len(prefix):].strip()
+
+    return text
+
+
+# =========================================================
+# MEMORY RESPONSE
+# =========================================================
+
+def handle_memory_request(message: str):
+
+    memory_text = clean_memory_text(message)
+
+    if not memory_text:
+        return {
+            "status": "success",
+            "source": "memory",
+            "response": (
+                "Sure. What would you like me to remember?"
+            )
+        }
+
+    saved = save_memory(
+        memory_text,
+        category="user_preference"
+    )
+
+    if saved:
+        return {
+            "status": "success",
+            "source": "memory",
+            "response": (
+                f"Got it! I'll remember that: {memory_text}"
+            )
+        }
+
     return {
         "status": "success",
-        "message": "NOVA AI Assistant API is running.",
-        "cloud_api": CLOUD_API_URL
+        "source": "memory",
+        "response": (
+            "I already have that in my memory."
+        )
     }
 
 
-# ============================================================
-# HEALTH CHECK
-# ============================================================
+# =========================================================
+# WEATHER RESPONSE FORMATTER
+# =========================================================
 
-@app.get("/health")
-def health():
-    cloud_status = "unknown"
+def format_weather_result(weather_result, location: str):
+    """
+    Convert different possible return formats from
+    api_services.get_weather() into a GUI-friendly string.
+    """
 
-    try:
-        response = requests.get(
-            f"{CLOUD_API_URL}/health",
-            timeout=15
+    if weather_result is None:
+        return "I couldn't get the weather information right now."
+
+    # Already a string
+    if isinstance(weather_result, str):
+        return weather_result
+
+    # Dictionary returned by weather service
+    if isinstance(weather_result, dict):
+
+        # If API itself returned a message
+        if weather_result.get("message"):
+            return str(weather_result["message"])
+
+        # Common possible weather keys
+        temperature = weather_result.get(
+            "temperature",
+            weather_result.get("temp")
         )
 
-        if response.ok:
-            cloud_status = "online"
-        else:
-            cloud_status = "offline"
+        feels_like = weather_result.get(
+            "feels_like",
+            weather_result.get("feels_like_temperature")
+        )
 
-    except Exception:
-        cloud_status = "offline"
+        humidity = weather_result.get("humidity")
 
-    return {
-        "status": "ok",
-        "local_api": "online",
-        "cloud_api": CLOUD_API_URL,
-        "cloud_status": cloud_status
-    }
+        wind_speed = weather_result.get(
+            "wind_speed",
+            weather_result.get("windspeed")
+        )
+
+        description = weather_result.get(
+            "description",
+            weather_result.get(
+                "weather",
+                weather_result.get("condition")
+            )
+        )
+
+        city = weather_result.get(
+            "location",
+            weather_result.get(
+                "city",
+                location
+            )
+        )
+
+        parts = []
+
+        if city:
+            parts.append(f"Weather in {city}")
+
+        if temperature is not None:
+            parts.append(f"Temperature: {temperature}°C")
+
+        if feels_like is not None:
+            parts.append(f"Feels like: {feels_like}°C")
+
+        if description:
+            parts.append(f"Condition: {description}")
+
+        if humidity is not None:
+            parts.append(f"Humidity: {humidity}%")
+
+        if wind_speed is not None:
+            parts.append(f"Wind: {wind_speed}")
+
+        if len(parts) > 1:
+            return ". ".join(parts) + "."
+
+        # Last-resort dictionary response
+        return str(weather_result)
+
+    return str(weather_result)
 
 
-# ============================================================
-# CLOUD CHAT
-# ============================================================
+# =========================================================
+# WEATHER DETECTION
+# =========================================================
 
-def cloud_chat(message: str):
+def extract_weather_location(message: str):
+    """
+    Extract location from natural weather requests.
+
+    Examples:
+
+        weather in Chennai
+        weather in Nerul
+        weather in Nerul Navi Mumbai
+        what is the weather in Mumbai
+        tell me weather for Delhi
+    """
+
+    text = message.strip()
+
+    patterns = [
+        r"\bweather\s+in\s+(.+)$",
+        r"\bweather\s+at\s+(.+)$",
+        r"\bweather\s+for\s+(.+)$",
+        r"\btemperature\s+in\s+(.+)$",
+        r"\btemperature\s+at\s+(.+)$",
+        r"\bforecast\s+in\s+(.+)$",
+        r"\bforecast\s+for\s+(.+)$",
+        r"\bwhat\s+is\s+the\s+weather\s+in\s+(.+)$",
+        r"\bwhat\s+is\s+the\s+weather\s+at\s+(.+)$",
+        r"\bwhat\s+is\s+the\s+weather\s+for\s+(.+)$",
+        r"\btell\s+me\s+the\s+weather\s+in\s+(.+)$",
+        r"\btell\s+me\s+weather\s+in\s+(.+)$"
+    ]
+
+    for pattern in patterns:
+
+        match = re.search(
+            pattern,
+            text,
+            flags=re.IGNORECASE
+        )
+
+        if match:
+            location = match.group(1).strip()
+
+            # Remove common trailing conversational words
+            location = re.sub(
+                r"\s+(please|now|today)\s*$",
+                "",
+                location,
+                flags=re.IGNORECASE
+            )
+
+            return location.strip()
+
+    return ""
+
+
+def is_weather_request(message: str) -> bool:
+
+    text = message.lower().strip()
+
+    weather_words = [
+        "weather",
+        "temperature",
+        "forecast"
+    ]
+
+    return any(
+        word in text
+        for word in weather_words
+    )
+
+
+# =========================================================
+# WEATHER HANDLER
+# =========================================================
+
+def handle_weather(message: str):
+
+    location = extract_weather_location(message)
+
+    if not location:
+
+        return {
+            "status": "success",
+            "source": "local",
+            "action": "get_weather",
+            "response": (
+                "Sure! Which city or area would you like "
+                "the weather for?"
+            )
+        }
 
     try:
+
+        weather_result = get_weather(location)
+
+        formatted_result = format_weather_result(
+            weather_result,
+            location
+        )
+
+        return {
+            "status": "success",
+            "source": "local",
+            "action": "get_weather",
+            "query": location,
+            "user_message": message,
+            "response": formatted_result
+        }
+
+    except Exception as e:
+
+        return {
+            "status": "error",
+            "source": "local",
+            "action": "get_weather",
+            "user_message": message,
+            "message": (
+                "I couldn't get the weather right now."
+            ),
+            "details": str(e)
+        }
+
+
+# =========================================================
+# CLOUD CHAT
+# =========================================================
+
+def cloud_chat(message: str):
+    """
+    Send normal conversation directly to Cloud /chat.
+    """
+
+    try:
+
         response = requests.post(
             f"{CLOUD_API_URL}/chat",
             json={
@@ -203,42 +536,85 @@ def cloud_chat(message: str):
             timeout=CLOUD_TIMEOUT
         )
 
-        response.raise_for_status()
+    except requests.Timeout:
+
+        return {
+            "status": "error",
+            "source": "cloud_chat",
+            "message": (
+                "Nova Cloud is taking too long to respond."
+            )
+        }
+
+    except requests.RequestException as e:
+
+        return {
+            "status": "error",
+            "source": "cloud_chat",
+            "message": (
+                "Nova Cloud API is unavailable."
+            ),
+            "details": str(e)
+        }
+
+    try:
 
         data = response.json()
 
-        return {
-            "success": True,
-            "data": data
-        }
-
-    except requests.exceptions.Timeout:
+    except ValueError:
 
         return {
-            "success": False,
-            "error": "Cloud AI request timed out."
+            "status": "error",
+            "source": "cloud_chat",
+            "message": (
+                "Nova Cloud returned invalid JSON."
+            )
         }
 
-    except requests.exceptions.RequestException as e:
+    if response.status_code != 200:
 
         return {
-            "success": False,
-            "error": str(e)
+            "status": "error",
+            "source": "cloud_chat",
+            "message": (
+                "Nova Cloud returned an error."
+            ),
+            "details": data
         }
 
-    except Exception as e:
+    answer = data.get(
+        "response",
+        data.get("message", "")
+    )
 
-        return {
-            "success": False,
-            "error": str(e)
-        }
+    if answer:
+
+        save_message(
+            "user",
+            message
+        )
+
+        save_message(
+            "assistant",
+            answer
+        )
+
+    return {
+        "status": "success",
+        "source": "cloud_chat",
+        "user_message": message,
+        "response": answer
+    }
 
 
-# ============================================================
+# =========================================================
 # CLOUD SMART COMMAND
-# ============================================================
+# =========================================================
 
 def cloud_smart_command(message: str):
+    """
+    Send a command-like request to Cloud /smart-command.
+    """
 
     try:
 
@@ -250,235 +626,177 @@ def cloud_smart_command(message: str):
             timeout=CLOUD_TIMEOUT
         )
 
-        response.raise_for_status()
+    except requests.Timeout:
+
+        return {
+            "status": "error",
+            "source": "cloud_api",
+            "user_message": message,
+            "message": (
+                "Nova Cloud is taking too long to respond."
+            )
+        }
+
+    except requests.RequestException as e:
+
+        return {
+            "status": "error",
+            "source": "cloud_api",
+            "user_message": message,
+            "message": (
+                "Nova Cloud API is unavailable."
+            ),
+            "details": str(e)
+        }
+
+    try:
 
         data = response.json()
 
-        return {
-            "success": True,
-            "data": data
-        }
-
-    except requests.exceptions.Timeout:
+    except ValueError:
 
         return {
-            "success": False,
-            "error": "Cloud smart-command request timed out."
+            "status": "error",
+            "source": "cloud_api",
+            "user_message": message,
+            "message": (
+                "Nova Cloud returned invalid JSON."
+            )
         }
 
-    except requests.exceptions.RequestException as e:
+    if response.status_code != 200:
 
         return {
-            "success": False,
-            "error": str(e)
+            "status": "error",
+            "source": "cloud_api",
+            "user_message": message,
+            "message": (
+                "Nova Cloud returned an error."
+            ),
+            "details": data
         }
 
-    except Exception as e:
-
-        return {
-            "success": False,
-            "error": str(e)
-        }
+    return data
 
 
-# ============================================================
-# COMMAND-LIKE CHECK
-# ============================================================
+# =========================================================
+# COMMAND DETECTION
+# =========================================================
 
-def looks_like_command(text: str):
+def looks_like_command(text: str) -> bool:
+    """
+    Decide locally whether a request looks like an action command.
+
+    General conversation:
+        hello
+        how are you?
+        explain machine learning
+
+    goes directly to /chat.
+
+    Action requests:
+        open YouTube
+        search Google
+        weather in Chennai
+        take screenshot
+
+    go through smart command routing.
+    """
 
     text = text.lower().strip()
 
-    patterns = [
-
-        # Volume
-        r"\bvolume\b",
-        r"\bmute\b",
-
-        # Brightness
-        r"\bbrightness\b",
-        r"\bbrighter\b",
-        r"\bdimmer\b",
-        r"\bscreen brighter\b",
-
-        # Media
-        r"\bplay\b",
-        r"\bpause\b",
-        r"\bnext song\b",
-        r"\bprevious song\b",
-
-        # Websites
-        r"\byoutube\b",
-        r"\bgmail\b",
-        r"\bgoogle\b",
+    command_patterns = [
 
         # Applications
-        r"\bcalculator\b",
-        r"\bnotepad\b",
-        r"\bfile explorer\b",
-        r"\btask manager\b",
-        r"\bcommand prompt\b",
-        r"\bcmd\b",
-        r"\bsettings\b",
+        r"\b(open|close|launch|start)\b.*\b(calculator|notepad|file explorer|task manager|settings)\b",
+        r"\bcalculator\b.*\b(please|open|start)\b",
 
-        # Folders
-        r"\bdesktop\b",
-        r"\bdocuments\b",
-        r"\bdownloads\b",
+        # Websites
+        r"\b(open|launch)\b.*\b(youtube|google|gmail)\b",
+        r"\b(search)\b.*\b(google|youtube|web)\b",
+
+        # Files / folders
+        r"\b(create|make|open)\b.*\b(folder|file|desktop|documents|downloads)\b",
 
         # System
-        r"\bbattery\b",
-        r"\bcpu\b",
-        r"\bram\b",
-        r"\bmemory usage\b",
-        r"\bsystem information\b",
-        r"\bsystem info\b",
+        r"\b(battery|ram|cpu|system info|system information)\b",
+        r"\b(screenshot|screen shot)\b",
 
-        # Time/date
-        r"\bwhat time\b",
-        r"\bcurrent time\b",
-        r"\bwhat date\b",
-        r"\btoday's date\b",
-        r"\btodays date\b",
+        # Volume / brightness
+        r"\b(mute|unmute|increase|decrease|raise|lower)\b.*\b(volume|brightness)\b",
 
-        # Screenshot
-        r"\bscreenshot\b",
-        r"\bscreen shot\b",
-
-        # Weather
-        r"\bweather\b",
-        r"\btemperature\b",
-        r"\bforecast\b",
+        # Media
+        r"\b(play|pause|next|previous)\b.*\b(music|song|track)\b",
 
         # Computer
-        r"\bshutdown\b",
-        r"\bshut down\b",
-        r"\brestart\b",
-        r"\breboot\b",
-        r"\block my computer\b",
-        r"\block the computer\b",
+        r"\b(lock|restart|shutdown|shut down)\b.*\b(computer|laptop|pc)\b",
 
-        # Files
-        r"\bcreate folder\b",
-        r"\bmake folder\b",
-        r"\bnew folder\b",
-        r"\bcreate text file\b",
-        r"\bmake text file\b"
+        # Weather
+        r"\b(weather|temperature|forecast)\b",
+
+        # Explicit commands
+        r"^\s*(open|close|launch|start|search|create|make|take|mute|unmute|restart|shutdown|shut down|lock)\b"
     ]
 
-    for pattern in patterns:
+    for pattern in command_patterns:
 
-        if re.search(pattern, text):
+        if re.search(
+            pattern,
+            text
+        ):
             return True
 
     return False
 
 
-# ============================================================
-# WEATHER EXECUTION
-# ============================================================
-
-def execute_weather(message: str, query: str):
-
-    try:
-
-        if not query:
-
-            return {
-                "status": "error",
-                "source": "weather_api",
-                "message": "Please specify a city."
-            }
-
-        weather = get_weather(query)
-
-        if not weather:
-
-            return {
-                "status": "error",
-                "source": "weather_api",
-                "message": "I couldn't reach the weather service."
-            }
-
-        if not weather.get("success"):
-
-            return {
-                "status": "error",
-                "source": "weather_api",
-                "message": weather.get(
-                    "error",
-                    "I couldn't reach the weather service."
-                )
-            }
-
-        response = (
-            f"Weather in {weather['city']}, "
-            f"{weather['country']}: "
-            f"{weather['temperature']}°C, "
-            f"feels like {weather['feels_like']}°C, "
-            f"humidity {weather['humidity']}%, "
-            f"{weather['description']}."
-        )
-
-        save_message(
-            "user",
-            message
-        )
-
-        save_message(
-            "assistant",
-            response
-        )
-
-        return {
-            "status": "success",
-            "source": "weather_api",
-            "action": "get_weather",
-            "query": query,
-            "response": response
-        }
-
-    except Exception as e:
-
-        print(
-            "WEATHER ERROR:",
-            repr(e)
-        )
-
-        return {
-            "status": "error",
-            "source": "weather_api",
-            "message": "I couldn't reach the weather service.",
-            "details": str(e)
-        }
-
-
-# ============================================================
+# =========================================================
 # LOCAL COMMAND EXECUTION
-# ============================================================
+# =========================================================
 
 def execute_local_result(
     message: str,
     action: str,
     query: str
 ):
+    """
+    Execute a locally detected action.
+    """
 
-    # --------------------------------------------------------
-    # WEATHER
-    # --------------------------------------------------------
+    # ---------------------------------------------
+    # Unknown action protection
+    # ---------------------------------------------
 
-    if action == "get_weather":
+    if not action or action == "unknown":
 
-        return execute_weather(
-            message,
-            query
-        )
+        return {
+            "status": "unknown",
+            "source": "local",
+            "user_message": message,
+            "message": (
+                "I don't know how to perform that action yet."
+            )
+        }
 
-    # --------------------------------------------------------
-    # DANGEROUS ACTION
-    # --------------------------------------------------------
+    # ---------------------------------------------
+    # Dangerous commands
+    # ---------------------------------------------
 
     if action in DANGEROUS_ACTIONS:
+
+        confirmation_messages = {
+
+            "shutdown_computer":
+                "Your computer will shut down. "
+                "Do you want me to continue?",
+
+            "restart_computer":
+                "Your computer will restart. "
+                "Do you want me to continue?",
+
+            "lock_computer":
+                "Your computer will be locked. "
+                "Do you want me to continue?"
+        }
 
         return {
             "status": "confirmation_required",
@@ -486,27 +804,13 @@ def execute_local_result(
             "user_message": message,
             "action": action,
             "query": query,
-            "message": (
-                f"Please confirm before I execute "
-                f"{action.replace('_', ' ')}."
-            )
+            "confirmation_message":
+                confirmation_messages[action]
         }
 
-    # --------------------------------------------------------
-    # VALIDATE ACTION
-    # --------------------------------------------------------
-
-    if action not in ALLOWED_ACTIONS:
-
-        return {
-            "status": "error",
-            "source": "local",
-            "message": f"Unknown action: {action}"
-        }
-
-    # --------------------------------------------------------
-    # EXECUTE WINDOWS COMMAND
-    # --------------------------------------------------------
+    # ---------------------------------------------
+    # Normal local command
+    # ---------------------------------------------
 
     try:
 
@@ -526,24 +830,61 @@ def execute_local_result(
 
     except Exception as e:
 
-        print(
-            "LOCAL COMMAND ERROR:",
-            repr(e)
-        )
-
         return {
             "status": "error",
             "source": "local",
             "user_message": message,
             "action": action,
             "query": query,
-            "message": str(e)
+            "message": (
+                "I couldn't execute that command."
+            ),
+            "details": str(e)
         }
 
 
-# ============================================================
-# CHAT ENDPOINT
-# ============================================================
+# =========================================================
+# HOME
+# =========================================================
+
+@app.get("/")
+def home():
+
+    return {
+        "status": "success",
+        "message": "Nova AI Assistant API is running!"
+    }
+
+
+# =========================================================
+# HEALTH
+# =========================================================
+
+@app.get("/health")
+def health():
+
+    return {
+        "status": "ok",
+        "local_api": True,
+        "cloud_api": CLOUD_API_URL
+    }
+
+
+# =========================================================
+# HELLO
+# =========================================================
+
+@app.get("/hello")
+def hello():
+
+    return {
+        "message": "Hello! I am Nova."
+    }
+
+
+# =========================================================
+# DIRECT CHAT
+# =========================================================
 
 @app.post("/chat")
 def chat(request: ChatRequest):
@@ -554,252 +895,134 @@ def chat(request: ChatRequest):
 
         return {
             "status": "error",
-            "message": "Message cannot be empty."
+            "source": "local",
+            "message": "Please provide a message."
         }
 
-    result = cloud_chat(message)
+    # Memory request
+    if is_memory_request(message):
 
-    if not result["success"]:
+        return handle_memory_request(message)
 
-        return {
-            "status": "error",
-            "source": "cloud_chat",
-            "message": result["error"]
-        }
-
-    data = result["data"]
-
-    response_text = (
-        data.get("response")
-        or data.get("message")
-        or data.get("text")
-        or str(data)
-    )
-
-    save_message(
-        "user",
+    return cloud_chat(
         message
     )
 
-    save_message(
-        "assistant",
-        response_text
+
+# =========================================================
+# MEMORY RESET
+# =========================================================
+
+@app.post("/memory/reset")
+def reset_memory():
+
+    clear_memory()
+
+    return {
+        "status": "success",
+        "message": (
+            "Nova's permanent memory has been cleared."
+        )
+    }
+
+
+# =========================================================
+# DIRECT COMMAND
+# =========================================================
+
+@app.post("/command")
+def command(request: ChatRequest):
+
+    message = request.message.strip()
+
+    if not message:
+
+        return {
+            "status": "error",
+            "message": "Please provide a command."
+        }
+
+    result = execute_command(
+        message
     )
 
     return {
         "status": "success",
-        "source": "cloud_chat",
-        "user_message": message,
-        "response": response_text
+        "command": message,
+        "result": result
     }
 
 
-# ============================================================
-# SMART COMMAND ENDPOINT
-# ============================================================
+# =========================================================
+# SMART COMMAND
+# =========================================================
 
 @app.post("/smart-command")
-def smart_command(request: SmartCommandRequest):
+def smart_command(
+    request: SmartCommandRequest
+):
 
+    # IMPORTANT:
+    # Define message BEFORE using it anywhere.
     message = request.message.strip()
 
     if not message:
 
         return {
             "status": "error",
-            "message": "Message cannot be empty."
+            "source": "local",
+            "message": "Please provide a command or message."
         }
 
-    # --------------------------------------------------------
-    # LOCAL DETECTION
-    # IMPORTANT:
-    # detect_local_command() can return None.
-    # Never unpack None directly.
-    # --------------------------------------------------------
+    # =====================================================
+    # STEP 1: MEMORY
+    # =====================================================
 
-    local_result = detect_local_command(message)
+    if is_memory_request(message):
 
-    if local_result is not None:
-
-        local_action, local_query = local_result
-
-        return execute_local_result(
-            message,
-            local_action,
-            local_query
-        )
-
-    # --------------------------------------------------------
-    # CLOUD SMART COMMAND
-    # --------------------------------------------------------
-
-    result = cloud_smart_command(message)
-
-    if not result["success"]:
-
-        return {
-            "status": "error",
-            "source": "cloud_smart_command",
-            "message": result["error"]
-        }
-
-    data = result["data"]
-
-    action = data.get("action")
-    query = data.get("query", "")
-
-    is_command = data.get(
-        "is_command",
-        False
-    )
-
-    # --------------------------------------------------------
-    # NORMAL QUESTION
-    # --------------------------------------------------------
-
-    if not is_command:
-
-        chat_result = cloud_chat(message)
-
-        if not chat_result["success"]:
-
-            return {
-                "status": "error",
-                "source": "cloud_chat",
-                "message": chat_result["error"]
-            }
-
-        chat_data = chat_result["data"]
-
-        response_text = (
-            chat_data.get("response")
-            or chat_data.get("message")
-            or chat_data.get("text")
-            or str(chat_data)
-        )
-
-        save_message(
-            "user",
+        return handle_memory_request(
             message
         )
 
-        save_message(
-            "assistant",
-            response_text
+    # =====================================================
+    # STEP 2: WEATHER
+    # =====================================================
+
+    # Handle weather locally BEFORE local command detection.
+    #
+    # This prevents:
+    #
+    # weather in Nerul
+    #
+    # from falling through to unknown/cloud routing.
+
+    if is_weather_request(message):
+
+        return handle_weather(
+            message
         )
 
-        return {
-            "status": "success",
-            "source": "cloud_chat",
-            "user_message": message,
-            "response": response_text
-        }
+    # =====================================================
+    # STEP 3: LOCAL COMMAND DETECTION
+    # =====================================================
 
-    # --------------------------------------------------------
-    # CLOUD WEATHER
-    # --------------------------------------------------------
-
-    if action == "get_weather":
-
-        return execute_weather(
-            message,
-            query
-        )
-
-    # --------------------------------------------------------
-    # DANGEROUS COMMAND
-    # --------------------------------------------------------
-
-    if action in DANGEROUS_ACTIONS:
-
-        return {
-            "status": "confirmation_required",
-            "source": "cloud",
-            "user_message": message,
-            "action": action,
-            "query": query,
-            "message": (
-                f"Please confirm before I execute "
-                f"{action.replace('_', ' ')}."
-            )
-        }
-
-    # --------------------------------------------------------
-    # VALIDATE CLOUD ACTION
-    # --------------------------------------------------------
-
-    if action not in ALLOWED_ACTIONS:
-
-        return {
-            "status": "error",
-            "source": "cloud",
-            "message": f"Unknown action: {action}"
-        }
-
-    # --------------------------------------------------------
-    # EXECUTE CLOUD-DETECTED LOCAL COMMAND
-    # --------------------------------------------------------
-
-    try:
-
-        result = execute_command(
-            action,
-            query
-        )
-
-        return {
-            "status": "success",
-            "source": "cloud",
-            "user_message": message,
-            "action": action,
-            "query": query,
-            "response": result
-        }
-
-    except Exception as e:
-
-        print(
-            "CLOUD COMMAND EXECUTION ERROR:",
-            repr(e)
-        )
-
-        return {
-            "status": "error",
-            "source": "cloud",
-            "action": action,
-            "query": query,
-            "message": str(e)
-        }
-
-
-# ============================================================
-# MAIN COMMAND ENDPOINT
-# ============================================================
-
-@app.post("/command")
-def command(request: CommandRequest):
-
-    message = request.message.strip()
-
-    if not message:
-
-        return {
-            "status": "error",
-            "message": "Command cannot be empty."
-        }
-
-    # ========================================================
-    # 1. LOCAL COMMAND DETECTION
-    # ========================================================
-
-    local_result = detect_local_command(message)
+    local_action, local_query = detect_local_command(
+        message
+    )
 
     # IMPORTANT:
-    # local_result may be None.
-    # We must check it before unpacking.
-    if local_result is not None:
+    #
+    # detect_local_command() can return:
+    #
+    # ("unknown", "")
+    #
+    # "unknown" is truthy in Python, so we MUST explicitly
+    # reject it.
 
-        local_action, local_query = local_result
+    if (
+        local_action
+        and local_action != "unknown"
+    ):
 
         return execute_local_result(
             message,
@@ -807,263 +1030,203 @@ def command(request: CommandRequest):
             local_query
         )
 
-    # ========================================================
-    # 2. IF NOT COMMAND-LIKE → CLOUD CHAT
-    # ========================================================
+    # =====================================================
+    # STEP 4: FAST CHAT ROUTING
+    # =====================================================
+
+    # Normal conversation goes directly to /chat.
 
     if not looks_like_command(message):
 
-        result = cloud_chat(message)
-
-        if not result["success"]:
-
-            return {
-                "status": "error",
-                "source": "cloud_chat",
-                "message": result["error"]
-            }
-
-        data = result["data"]
-
-        response_text = (
-            data.get("response")
-            or data.get("message")
-            or data.get("text")
-            or str(data)
-        )
-
-        save_message(
-            "user",
+        return cloud_chat(
             message
         )
 
-        save_message(
-            "assistant",
-            response_text
-        )
+    # =====================================================
+    # STEP 5: COMMAND-LIKE REQUEST
+    # =====================================================
 
-        return {
-            "status": "success",
-            "source": "cloud_chat",
-            "user_message": message,
-            "response": response_text
-        }
+    # Send command-like request to cloud /smart-command.
 
-    # ========================================================
-    # 3. CLOUD SMART COMMAND
-    # ========================================================
+    cloud_data = cloud_smart_command(
+        message
+    )
 
-    result = cloud_smart_command(message)
-
-    if not result["success"]:
+    if not isinstance(
+        cloud_data,
+        dict
+    ):
 
         return {
             "status": "error",
-            "source": "cloud_smart_command",
-            "message": result["error"]
-        }
-
-    data = result["data"]
-
-    action = data.get("action")
-    query = data.get("query", "")
-
-    is_command = data.get(
-        "is_command",
-        False
-    )
-
-    # ========================================================
-    # 4. CLOUD SAYS IT IS NOT A COMMAND
-    # ========================================================
-
-    if not is_command:
-
-        chat_result = cloud_chat(message)
-
-        if not chat_result["success"]:
-
-            return {
-                "status": "error",
-                "source": "cloud_chat",
-                "message": chat_result["error"]
-            }
-
-        chat_data = chat_result["data"]
-
-        response_text = (
-            chat_data.get("response")
-            or chat_data.get("message")
-            or chat_data.get("text")
-            or str(chat_data)
-        )
-
-        save_message(
-            "user",
-            message
-        )
-
-        save_message(
-            "assistant",
-            response_text
-        )
-
-        return {
-            "status": "success",
-            "source": "cloud_chat",
+            "source": "cloud_api",
             "user_message": message,
-            "response": response_text
-        }
-
-    # ========================================================
-    # 5. CLOUD WEATHER
-    # ========================================================
-
-    if action == "get_weather":
-
-        return execute_weather(
-            message,
-            query
-        )
-
-    # ========================================================
-    # 6. DANGEROUS CLOUD COMMAND
-    # ========================================================
-
-    if action in DANGEROUS_ACTIONS:
-
-        return {
-            "status": "confirmation_required",
-            "source": "cloud",
-            "user_message": message,
-            "action": action,
-            "query": query,
             "message": (
-                f"Please confirm before I execute "
-                f"{action.replace('_', ' ')}."
+                "Nova Cloud returned an invalid response."
             )
         }
 
-    # ========================================================
-    # 7. VALIDATE ACTION
-    # ========================================================
+    # =====================================================
+    # STEP 6: CLOUD ERROR
+    # =====================================================
 
-    if action not in ALLOWED_ACTIONS:
+    if cloud_data.get(
+        "status"
+    ) == "error":
+
+        return cloud_data
+
+    # =====================================================
+    # STEP 7: CLOUD UNKNOWN
+    # =====================================================
+
+    cloud_action = cloud_data.get(
+        "action"
+    )
+
+    cloud_status = cloud_data.get(
+        "status"
+    )
+
+    if (
+        cloud_status == "unknown"
+        or cloud_action is None
+        or cloud_action == "unknown"
+    ):
+
+        # If it isn't actually a command, let Gemini
+        # answer it as normal conversation.
+
+        return cloud_chat(
+            message
+        )
+
+    # =====================================================
+    # STEP 8: CLOUD CONFIRMATION
+    # =====================================================
+
+    if cloud_status == "confirmation_required":
+
+        return cloud_data
+
+    # =====================================================
+    # STEP 9: DANGEROUS CLOUD ACTION
+    # =====================================================
+
+    if cloud_action in DANGEROUS_ACTIONS:
+
+        confirmation_messages = {
+
+            "shutdown_computer":
+                "Your computer will shut down. "
+                "Do you want me to continue?",
+
+            "restart_computer":
+                "Your computer will restart. "
+                "Do you want me to continue?",
+
+            "lock_computer":
+                "Your computer will be locked. "
+                "Do you want me to continue?"
+        }
+
+        return {
+            "status": "confirmation_required",
+            "source": "cloud_ai",
+            "user_message": message,
+            "action": cloud_action,
+            "query": cloud_data.get(
+                "query",
+                ""
+            ),
+            "confirmation_message":
+                confirmation_messages[cloud_action]
+        }
+
+    # =====================================================
+    # STEP 10: WEATHER FROM CLOUD
+    # =====================================================
+
+    if cloud_action == "get_weather":
+
+        return cloud_data
+
+    # =====================================================
+    # STEP 11: VALIDATE ACTION
+    # =====================================================
+
+    if cloud_action not in ALLOWED_ACTIONS:
 
         return {
             "status": "error",
-            "source": "cloud",
+            "source": "cloud_api",
             "user_message": message,
-            "action": action,
-            "query": query,
-            "message": f"Unknown action: {action}"
+            "message": (
+                "Cloud returned an unsupported action."
+            ),
+            "action": cloud_action
         }
 
-    # ========================================================
-    # 8. EXECUTE COMMAND LOCALLY
-    # ========================================================
+    # =====================================================
+    # STEP 12: EXECUTE CLOUD-IDENTIFIED ACTION LOCALLY
+    # =====================================================
 
-    try:
+    query = cloud_data.get(
+        "query",
+        ""
+    )
 
-        result = execute_command(
-            action,
-            query
-        )
-
-        return {
-            "status": "success",
-            "source": "cloud",
-            "user_message": message,
-            "action": action,
-            "query": query,
-            "response": result
-        }
-
-    except Exception as e:
-
-        print(
-            "COMMAND EXECUTION ERROR:",
-            repr(e)
-        )
-
-        return {
-            "status": "error",
-            "source": "cloud",
-            "user_message": message,
-            "action": action,
-            "query": query,
-            "message": str(e)
-        }
+    return execute_local_result(
+        message,
+        cloud_action,
+        query
+    )
 
 
-# ============================================================
-# CONFIRM DANGEROUS COMMAND
-# ============================================================
+# =========================================================
+# CONFIRM COMMAND
+# =========================================================
 
 @app.post("/confirm-command")
 def confirm_command(
     request: ConfirmCommandRequest
 ):
 
-    action = request.action
-    query = request.query
+    allowed_actions = {
+        "shutdown_computer",
+        "restart_computer",
+        "lock_computer"
+    }
 
-    if action not in DANGEROUS_ACTIONS:
+    if request.action not in allowed_actions:
 
         return {
             "status": "error",
-            "message": "This action does not require confirmation."
+            "message": (
+                "Invalid confirmation action."
+            )
         }
 
     try:
 
         result = execute_command(
-            action,
-            query
+            request.action,
+            request.query
         )
 
         return {
             "status": "success",
-            "source": "local",
-            "action": action,
-            "query": query,
+            "action": request.action,
             "response": result
         }
 
     except Exception as e:
 
-        print(
-            "CONFIRMED COMMAND ERROR:",
-            repr(e)
-        )
-
         return {
             "status": "error",
-            "source": "local",
-            "action": action,
-            "message": str(e)
-        }
-
-
-# ============================================================
-# CLEAR MEMORY
-# ============================================================
-
-@app.post("/clear-memory")
-def clear_memory_endpoint():
-
-    try:
-
-        clear_memory()
-
-        return {
-            "status": "success",
-            "message": "Conversation memory cleared."
-        }
-
-    except Exception as e:
-
-        return {
-            "status": "error",
-            "message": str(e)
+            "action": request.action,
+            "message": (
+                "Could not execute confirmed command."
+            ),
+            "details": str(e)
         }
