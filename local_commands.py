@@ -130,6 +130,7 @@ def detect_local_command(text):
     ):
         return "open_youtube", ""
 
+
     if "gmail" in text and (
         "open" in text
         or "launch" in text
@@ -137,38 +138,143 @@ def detect_local_command(text):
     ):
         return "open_gmail", ""
 
+
+    # ==========================================
+    # GOOGLE SEARCH
+    # ==========================================
+
     if (
         "google" in text
         and (
             "search" in text
             or "google for" in text
+            or "search for" in text
+            or "look up" in text
         )
     ):
+
+        query = text
+
+        # Remove wake word
         query = re.sub(
-            r"^(search\s+google\s+for|google\s+for|search\s+google)\s*",
+            r"^(?:nova[\s,:-]*)",
             "",
-            text,
-            flags=re.IGNORECASE,
+            query,
+            flags=re.IGNORECASE
         ).strip()
 
+        # google search Python tutorials
+        query = re.sub(
+            r"^google\s+search\s+",
+            "",
+            query,
+            flags=re.IGNORECASE
+        )
+
+        # search Google for Python tutorials
+        query = re.sub(
+            r"^search\s+google(?:\s+for)?\s+",
+            "",
+            query,
+            flags=re.IGNORECASE
+        )
+
+        # search for Python tutorials
+        query = re.sub(
+            r"^search\s+for\s+",
+            "",
+            query,
+            flags=re.IGNORECASE
+        )
+
+        # look up Python tutorials
+        query = re.sub(
+            r"^look\s+up\s+",
+            "",
+            query,
+            flags=re.IGNORECASE
+        )
+
+        # Remove Google at the end
+        query = re.sub(
+            r"\s+(?:in|on|using)\s+google(?:\s+chrome)?\s*$",
+            "",
+            query,
+            flags=re.IGNORECASE
+        )
+
+        query = query.strip(" .?!")
+
         return "search_google", query
+
+
+    # ==========================================
+    # YOUTUBE SEARCH
+    # ==========================================
 
     if (
         "youtube" in text
         and (
             "search" in text
-            or "search youtube for" in text
+            or "youtube for" in text
+            or "search for" in text
+            or "look up" in text
         )
     ):
+
+        query = text
+
+        # Remove wake word
         query = re.sub(
-            r"^(search\s+youtube\s+for|search\s+youtube)\s*",
+            r"^(?:nova[\s,:-]*)",
             "",
-            text,
-            flags=re.IGNORECASE,
+            query,
+            flags=re.IGNORECASE
         ).strip()
 
-        return "search_youtube", query
+        # youtube search Python tutorials
+        query = re.sub(
+            r"^youtube\s+search\s+",
+            "",
+            query,
+            flags=re.IGNORECASE
+        )
 
+        # search YouTube for Python tutorials
+        query = re.sub(
+            r"^search\s+youtube(?:\s+for)?\s+",
+            "",
+            query,
+            flags=re.IGNORECASE
+        )
+
+        # search for Python tutorials
+        query = re.sub(
+            r"^search\s+for\s+",
+            "",
+            query,
+            flags=re.IGNORECASE
+        )
+
+        # look up Python tutorials
+        query = re.sub(
+            r"^look\s+up\s+",
+            "",
+            query,
+            flags=re.IGNORECASE
+        )
+
+        # Remove YouTube at the end
+        query = re.sub(
+            r"\s+(?:in|on|using)\s+youtube(?:\s+chrome)?\s*$",
+            "",
+            query,
+            flags=re.IGNORECASE
+        )
+
+        query = query.strip(" .?!")
+
+        return "search_youtube", query
     # ==========================================
     # CALCULATOR
     # ==========================================

@@ -1,4 +1,6 @@
 import tkinter as tk
+import threading
+import uvicorn
 from tkinter import messagebox
 import threading
 import queue
@@ -9,6 +11,47 @@ import psutil
 import re
 import time
 
+def start_local_api():
+    """
+    Start NOVA's FastAPI server in the background.
+
+    COM is initialized here because several Windows-specific
+    NOVA components use COM and the API is running in a
+    separate thread.
+    """
+    try:
+        import comtypes
+
+        # Initialize COM for this background thread
+        comtypes.CoInitialize()
+
+        print("NOVA: COM initialized")
+        
+        # Import main only AFTER COM initialization
+        import main
+
+        print("NOVA: FastAPI module loaded")
+        print("NOVA: Starting local API...")
+
+        uvicorn.run(
+            main.app,
+            host="127.0.0.1",
+            port=8000,
+            log_level="warning",
+            reload=False,
+            workers=1
+        )
+
+    except Exception as e:
+        print("NOVA API error:", repr(e))
+
+    finally:
+        try:
+            import comtypes
+            comtypes.CoUninitialize()
+        except Exception:
+            pass
+                  
 # Optional Windows volume support
 try:
     from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
@@ -2044,5 +2087,17 @@ print(
     "======================================"
 )
 
+# ============================================================
+# START LOCAL API AUTOMATICALLY
+# ============================================================
+
+print("NOVA LOCAL API: Starting automatically...")
+
+api_thread = threading.Thread(
+    target=start_local_api,
+    daemon=True
+)
+
+api_thread.start()
 
 root.mainloop()
